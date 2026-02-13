@@ -8,33 +8,76 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { UtensilsCrossed } from 'lucide-react-native';
-import { supabase, MenuItem } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
 import { MenuItemCard } from '@/components/MenuItemCard';
+import { database } from '@/lib/firebase';
+import { ref, get } from 'firebase/database';
+
+type FirebaseObject<T> = { [key: string]: T };
+type ProductCategory = { name: string };
+type Product = {
+  id: string;
+  category_id: string;
+  description: string;
+  name: string;
+  photo_url: string;
+  price: number;
+  categoryName: string; // Adicionando o nome da categoria ao produto
+};
 
 export default function MenuScreen() {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuItems, setMenuItems] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(['Todos']);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const { addToCart, getItemCount } = useCart();
 
-  const categories = ['Todos', 'Lanches', 'Bebidas', 'Sobremesas'];
-
   useEffect(() => {
-    loadMenuItems();
+    loadFirebaseData();
   }, []);
 
-  async function loadMenuItems() {
+  async function loadFirebaseData() {
+    setLoading(true);
     try {
-      const { data } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('is_available', true)
-        .order('category', { ascending: true });
+      const categoriesRef = ref(database, 'foodCategories');
+      const productsRef = ref(database, 'products');
 
-      if (data) setMenuItems(data);
+      const [categoriesSnapshot, productsSnapshot] = await Promise.all([
+        get(categoriesRef),
+        get(productsRef),
+      ]);
+
+      if (categoriesSnapshot.exists() && productsSnapshot.exists()) {
+        const rawCategories: FirebaseObject<ProductCategory> =
+          categoriesSnapshot.val();
+        const rawProducts: FirebaseObject<Omit<Product, 'id' | 'categoryName'>> =
+          productsSnapshot.val();
+
+        // Mapeia categorias para um objeto mais fácil de consultar: { categoryId: categoryName }
+        const categoriesMap = Object.entries(rawCategories).reduce(
+          (acc, [id, data]) => {
+            acc[id] = data.name;
+            return acc;
+          },
+          {} as { [key: string]: string }
+        );
+
+        // Cria a lista de nomes de categorias para os botões de filtro
+        const categoryNames = ['Todos', ...Object.values(categoriesMap)];
+        setCategories(categoryNames);
+
+        // Cria a lista completa de produtos, adicionando o nome da categoria em cada um
+        const allProducts: Product[] = Object.entries(rawProducts).map(
+          ([id, data]) => ({
+            ...data,
+            id,
+            categoryName: categoriesMap[data.category_id] || 'Outros',
+          })
+        );
+        setMenuItems(allProducts);
+      }
     } catch (error) {
-      console.error('Error loading menu items:', error);
+      console.error('Error loading Firebase data:', error);
     } finally {
       setLoading(false);
     }
@@ -43,7 +86,7 @@ export default function MenuScreen() {
   const filteredItems =
     selectedCategory === 'Todos'
       ? menuItems
-      : menuItems.filter((item) => item.category === selectedCategory);
+      : menuItems.filter((item) => item.categoryName === selectedCategory);
 
   if (loading) {
     return (
@@ -109,15 +152,15 @@ export default function MenuScreen() {
               name={item.name}
               description={item.description}
               price={item.price}
-              imageUrl={item.image_url}
-              category={item.category}
+              imageUrl={item.photo_url}
+              category={item.categoryName}
               onAddToCart={() =>
                 addToCart({
                   id: item.id,
                   name: item.name,
                   price: item.price,
                   type: 'menu',
-                  image_url: item.image_url,
+                  image_url: item.photo_url,
                 })
               }
             />
