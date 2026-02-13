@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import * as SystemUI from 'expo-system-ui';
 import { UtensilsCrossed } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
 import { MenuItemCard } from '@/components/MenuItemCard';
@@ -31,6 +34,14 @@ export default function MenuScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const { addToCart, getItemCount } = useCart();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'android') {
+        SystemUI.setBackgroundColorAsync('#000');
+      }
+    }, [])
+  );
 
   useEffect(() => {
     loadFirebaseData();
