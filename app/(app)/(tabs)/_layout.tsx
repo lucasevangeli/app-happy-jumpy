@@ -7,7 +7,7 @@ import {
   ShoppingCart,
   LogOut,
 } from 'lucide-react-native';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, Platform } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 
@@ -35,8 +35,8 @@ export default function TabLayout() {
           backgroundColor: '#000',
           borderTopWidth: 1,
           borderTopColor: '#222',
-          height: 60,
-          paddingBottom: 8,
+          height: Platform.OS === 'ios' ? 80 : 60,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 8,
           paddingTop: 8,
         },
         tabBarActiveTintColor: '#00ff88',

@@ -287,6 +287,12 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     width: '100%',
+    ...Platform.select({
+      ios: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+      },
+    }),
   },
   inputContainer: {
     flexDirection: 'row',

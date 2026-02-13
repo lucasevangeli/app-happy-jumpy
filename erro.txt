@@ -1,0 +1,5 @@
+ WARN  [Layout children]: Too many screens defined. Route "+not-found" is extraneous.
+ ERROR  [Error: Uncaught (in promise, id: 3) Error: No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.] Uncaught (in promise, id: 3) Error: No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.
+ ERROR  [Error: Uncaught (in promise, id: 4) Error: No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.] Uncaught (in promise, id: 4) Error: No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.
+ ERROR  [Error: Uncaught (in promise, id: 5) Error: No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.] Uncaught (in promise, id: 5) Error: No native splash screen registered for given view controller. Call 'SplashScreen.show' for given view controller first.
+ WARN  [Layout children]: Too many screens defined. Route "+not-found" is extraneous.
