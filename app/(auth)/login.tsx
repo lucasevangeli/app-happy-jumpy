@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   Platform,
   Image,
+  KeyboardAvoidingView,
 } from 'react-native';
 import React, { useState, useRef, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -166,96 +167,101 @@ const LoginScreen = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <X size={24} color={ICON_COLOR} />
-            </TouchableOpacity>
-
-            <Text style={styles.modalTitle}>
-              {authMode === 'login' ? 'Entrar' : 'Criar Conta'}
-            </Text>
-
-            <View style={styles.inputContainer}>
-              <User size={ICON_SIZE} color={ICON_COLOR} />
-              <TextInput
-                style={styles.input}
-                placeholder="E-mail"
-                placeholderTextColor={ICON_COLOR}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Lock size={ICON_SIZE} color={ICON_COLOR} />
-              <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                placeholderTextColor={ICON_COLOR}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!isPasswordVisible}
-              />
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setModalVisible(false)}
+          >
+            <Pressable style={styles.modalContent} onPress={() => {}}>
               <TouchableOpacity
-                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
               >
-                {isPasswordVisible ? (
-                  <EyeOff size={ICON_SIZE} color={ICON_COLOR} />
-                ) : (
-                  <Eye size={ICON_SIZE} color={ICON_COLOR} />
-                )}
+                <X size={24} color={ICON_COLOR} />
               </TouchableOpacity>
-            </View>
 
-            {authMode === 'signup' && (
+              <Text style={styles.modalTitle}>
+                {authMode === 'login' ? 'Entrar' : 'Criar Conta'}
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <User size={ICON_SIZE} color={ICON_COLOR} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="E-mail"
+                  placeholderTextColor={ICON_COLOR}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </View>
+
               <View style={styles.inputContainer}>
                 <Lock size={ICON_SIZE} color={ICON_COLOR} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Confirmar Senha"
+                  placeholder="Senha"
                   placeholderTextColor={ICON_COLOR}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!isConfirmPasswordVisible}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!isPasswordVisible}
                 />
                 <TouchableOpacity
-                  onPress={() =>
-                    setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
-                  }
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                 >
-                  {isConfirmPasswordVisible ? (
+                  {isPasswordVisible ? (
                     <EyeOff size={ICON_SIZE} color={ICON_COLOR} />
                   ) : (
                     <Eye size={ICON_SIZE} color={ICON_COLOR} />
                   )}
                 </TouchableOpacity>
               </View>
-            )}
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleAuthentication}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading
-                  ? 'Processando...'
-                  : authMode === 'login'
-                  ? 'Confirmar Entrada'
-                  : 'Confirmar Cadastro'}
-              </Text>
-            </TouchableOpacity>
+              {authMode === 'signup' && (
+                <View style={styles.inputContainer}>
+                  <Lock size={ICON_SIZE} color={ICON_COLOR} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirmar Senha"
+                    placeholderTextColor={ICON_COLOR}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!isConfirmPasswordVisible}
+                  />
+                  <TouchableOpacity
+                    onPress={() =>
+                      setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
+                    }
+                  >
+                    {isConfirmPasswordVisible ? (
+                      <EyeOff size={ICON_SIZE} color={ICON_COLOR} />
+                    ) : (
+                      <Eye size={ICON_SIZE} color={ICON_COLOR} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleAuthentication}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading
+                    ? 'Processando...'
+                    : authMode === 'login'
+                    ? 'Confirmar Entrada'
+                    : 'Confirmar Cadastro'}
+                </Text>
+              </TouchableOpacity>
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -313,11 +319,11 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    height: 55,
+    height: 60,
     backgroundColor: NEON_GREEN,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 15,
+    borderRadius: 50,
     marginTop: 10,
   },
   buttonText: {
@@ -327,7 +333,7 @@ const styles = StyleSheet.create({
   },
   buttonOutline: {
     backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: NEON_GREEN,
   },
   buttonOutlineText: {
