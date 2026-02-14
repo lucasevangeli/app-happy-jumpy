@@ -16,11 +16,7 @@ import {
 import React, { useState, useRef, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import * as SystemUI from 'expo-system-ui';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { X, User, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { Video } from 'expo-av';
 import * as WebBrowser from 'expo-web-browser';
@@ -38,9 +34,10 @@ const LoginScreen = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
     useState(false);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  
+  const { signIn, signUp, loading } = useAuth();
   const video = useRef(null);
 
   useFocusEffect(
@@ -79,20 +76,19 @@ const LoginScreen = () => {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
-    setLoading(true);
+    
     try {
       if (authMode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signIn(email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await signUp(email, password);
       }
-      setModalVisible(false);
+      // The modal will be closed by the navigation change on successful login
+      // setModalVisible(false); 
     } catch (error: any) {
-      const friendlyMessage =
-        authMode === 'login' ? 'Erro no Login' : 'Erro no Cadastro';
-      Alert.alert(friendlyMessage, error.message);
-    } finally {
-      setLoading(false);
+      // Errors are already handled in the AuthContext, but a local catch can be kept for specific UI actions if needed.
+      // The alert is now in the context, so we might not need one here unless we want a different message.
+      console.log("Error from login screen:", error.message);
     }
   };
 

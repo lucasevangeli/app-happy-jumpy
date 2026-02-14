@@ -1,4 +1,4 @@
-import { Slot, useRouter, useSegments, SplashScreen } from 'expo-router';
+import { useRouter, useSegments, SplashScreen, Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { useEffect } from 'react';
 
@@ -6,34 +6,45 @@ import { useEffect } from 'react';
 SplashScreen.preventAutoHideAsync();
 
 const InitialLayout = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isProfileComplete } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
+    // Wait until loading is finished
+    if (loading) {
+      return;
+    }
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inAppGroup = segments[0] === '(app)';
 
-    if (user && inAuthGroup) {
-      router.replace('/(tabs)');
+    // Logic to redirect based on auth state and profile completion
+    if (user && !isProfileComplete && segments[0] !== 'complete-profile') {
+      router.replace('/complete-profile');
+    } else if (user && isProfileComplete && !inAppGroup) {
+      router.replace('/(app)');
     } else if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
 
-    // Esconde a splash screen quando a lógica de autenticação e roteamento estiver concluída
-    if (!loading) {
-      SplashScreen.hideAsync();
-    }
-  }, [user, loading, segments, router]);
+    // Hide the splash screen once everything is ready
+    SplashScreen.hideAsync();
+    
+  }, [user, loading, isProfileComplete, segments, router]);
 
-  // Renderiza o Slot (a rota atual) ou nada enquanto carrega.
-  // A splash screen nativa ficará visível durante o carregamento.
-  if (loading) {
-    return null;
-  }
-
-  return <Slot />;
+  // Render a basic Stack navigator
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* The (app) and (auth) groups are rendered here by default */}
+      <Stack.Screen
+        name="complete-profile"
+        options={{
+          presentation: 'modal',
+        }}
+      />
+    </Stack>
+  );
 };
 
 export default function RootLayout() {

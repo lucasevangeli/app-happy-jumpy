@@ -38,7 +38,6 @@ export default function RootLayout() {
     <CartProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="light" />
     </CartProvider>
