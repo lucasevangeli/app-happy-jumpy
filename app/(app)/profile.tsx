@@ -10,8 +10,8 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import {
   User,
@@ -28,7 +28,7 @@ const ICON_COLOR = '#6d6d6d';
 const ICON_SIZE = 20;
 
 const CompleteProfileScreen = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +42,21 @@ const CompleteProfileScreen = () => {
   const [complement, setComplement] = useState('');
   const [province, setProvince] = useState('');
   const [postalCode, setPostalCode] = useState('');
+
+  useEffect(() => {
+    // Pre-fill form with existing profile data
+    if (profile) {
+      setFullName(profile.fullName || '');
+      setPhone(profile.phone || '');
+      setBirthDate(profile.birthDate || '');
+      setCpfCnpj(profile.cpfCnpj || '');
+      setAddress(profile.address || '');
+      setAddressNumber(profile.addressNumber || '');
+      setComplement(profile.complement || '');
+      setProvince(profile.province || '');
+      setPostalCode(profile.postalCode || '');
+    }
+  }, [profile]);
 
   const handleProfileUpdate = async () => {
     if (!user) {
@@ -98,7 +113,8 @@ const CompleteProfileScreen = () => {
       }
 
       Alert.alert('Sucesso', 'Seu perfil foi atualizado!');
-      router.replace('/(app)');
+      // The state change from AuthContext will trigger the redirect in the root layout.
+      // No need to manually navigate here.
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     } finally {

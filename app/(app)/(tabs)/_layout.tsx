@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import {
   Home,
   Ticket,
@@ -6,12 +6,15 @@ import {
   UtensilsCrossed,
   ShoppingCart,
   LogOut,
+  User,
 } from 'lucide-react-native';
-import { TouchableOpacity, Platform } from 'react-native';
+import { TouchableOpacity, Platform, View } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 
 export default function TabLayout() {
+  const router = useRouter();
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -46,9 +49,18 @@ export default function TabLayout() {
           fontWeight: '600',
         },
         headerRight: () => (
-          <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
-            <LogOut size={24} color="#00ff88" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => router.push('/(app)/profile')}
+              style={{ marginRight: 20 }}>
+              <User size={26} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{ marginRight: 15 }}>
+              <LogOut size={24} color="#00ff88" />
+            </TouchableOpacity>
+          </View>
         ),
       }}>
       <Tabs.Screen

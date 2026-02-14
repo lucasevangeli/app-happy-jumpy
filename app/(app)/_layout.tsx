@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SplashScreen } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -11,10 +11,21 @@ import {
 } from '@expo-google-fonts/poppins';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { CartProvider } from '@/contexts/CartContext';
+import { TouchableOpacity } from 'react-native';
+import { User } from 'lucide-react-native';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function HeaderRight() {
+  const router = useRouter();
+  return (
+    <TouchableOpacity onPress={() => router.push('/(app)/profile')}>
+      <User color="#fff" style={{ marginRight: 15 }} />
+    </TouchableOpacity>
+  );
+}
+
+export default function AppLayout() {
   useFrameworkReady();
 
   const [fontsLoaded, fontError] = useFonts({
@@ -36,8 +47,24 @@ export default function RootLayout() {
 
   return (
     <CartProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack>
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="profile"
+          options={{
+            headerShown: true,
+            headerTitle: 'Meu Perfil',
+            headerStyle: {
+              backgroundColor: '#101010',
+            },
+            headerTintColor: '#fff',
+          }}
+        />
       </Stack>
       <StatusBar style="light" />
     </CartProvider>

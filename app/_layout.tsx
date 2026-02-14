@@ -20,8 +20,8 @@ const InitialLayout = () => {
     const inAppGroup = segments[0] === '(app)';
 
     // Logic to redirect based on auth state and profile completion
-    if (user && !isProfileComplete && segments[0] !== 'complete-profile') {
-      router.replace('/complete-profile');
+    if (user && !isProfileComplete) {
+      router.replace('/(app)/profile');
     } else if (user && isProfileComplete && !inAppGroup) {
       router.replace('/(app)');
     } else if (!user && !inAuthGroup) {
@@ -37,12 +37,6 @@ const InitialLayout = () => {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       {/* The (app) and (auth) groups are rendered here by default */}
-      <Stack.Screen
-        name="complete-profile"
-        options={{
-          presentation: 'modal',
-        }}
-      />
     </Stack>
   );
 };
