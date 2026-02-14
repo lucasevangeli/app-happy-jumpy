@@ -11,16 +11,38 @@ import {
 } from '@expo-google-fonts/poppins';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { CartProvider } from '@/contexts/CartContext';
-import { TouchableOpacity } from 'react-native';
-import { User } from 'lucide-react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { User, ChevronLeft } from 'lucide-react-native';
+
+const NEON_GREEN = '#00ff6a';
 
 SplashScreen.preventAutoHideAsync();
 
+// This component is for the icon on the TABS screen, not the profile screen
 function HeaderRight() {
   const router = useRouter();
   return (
     <TouchableOpacity onPress={() => router.push('/(app)/profile')}>
       <User color="#fff" style={{ marginRight: 15 }} />
+    </TouchableOpacity>
+  );
+}
+
+// This component is the custom BACK button for the PROFILE screen
+function CustomBackButton() {
+  const router = useRouter();
+  return (
+    <TouchableOpacity onPress={() => router.back()}>
+      <View
+        style={{
+          backgroundColor: NEON_GREEN,
+          padding: 4,
+          borderRadius: 20,
+          marginLeft: 15,
+        }}
+      >
+        <ChevronLeft color="#000" size={24} />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -51,18 +73,13 @@ export default function AppLayout() {
         <Stack.Screen
           name="(tabs)"
           options={{
-            headerShown: false,
+            headerShown: false, 
           }}
         />
         <Stack.Screen
           name="profile"
           options={{
-            headerShown: true,
-            headerTitle: 'Meu Perfil',
-            headerStyle: {
-              backgroundColor: '#101010',
-            },
-            headerTintColor: '#fff',
+            headerShown: false,
           }}
         />
       </Stack>
