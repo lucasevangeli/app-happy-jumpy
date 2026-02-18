@@ -12,6 +12,8 @@ import { TouchableOpacity, Platform, View } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
 
+const NEON_GREEN = '#00ff88';
+
 export default function TabLayout() {
   const router = useRouter();
 
@@ -42,7 +44,7 @@ export default function TabLayout() {
           paddingBottom: Platform.OS === 'ios' ? 30 : 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: '#00ff88',
+        tabBarActiveTintColor: NEON_GREEN,
         tabBarInactiveTintColor: '#666',
         tabBarLabelStyle: {
           fontSize: 12,
@@ -58,7 +60,7 @@ export default function TabLayout() {
             <TouchableOpacity
               onPress={handleLogout}
               style={{ marginRight: 15 }}>
-              <LogOut size={24} color="#00ff88" />
+              <LogOut size={24} color={NEON_GREEN} />
             </TouchableOpacity>
           </View>
         ),
@@ -67,6 +69,32 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Início',
+          headerTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/(app)/profile')}
+              style={{ marginLeft: 15 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 2,
+                  borderColor: NEON_GREEN,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <User size={22} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{ marginRight: 15 }}>
+              <LogOut size={24} color={NEON_GREEN} />
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ size, color }) => (
             <Home size={size} color={color} strokeWidth={2.5} />
           ),
