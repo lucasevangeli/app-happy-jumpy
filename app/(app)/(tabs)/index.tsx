@@ -7,8 +7,8 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles, TrendingUp, Gift, Ticket as TicketIcon } from 'lucide-react-native';
 import { supabase, Ticket, Combo } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
@@ -56,16 +56,15 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <LinearGradient
-        colors={['#ff00ff', '#00ffff', '#ffff00']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}>
+      <ImageBackground
+        source={require('@/assets/images/HappyJump35.png')}
+        style={styles.headerGradient}
+        resizeMode="cover">
         <View style={styles.headerContent}>
-          <Text style={styles.logo}>HAPPY JUMP</Text>
-          <Text style={styles.tagline}>Diversão Sem Limites!</Text>
+          {/* <Text style={styles.logo}>HAPPY JUMP</Text>
+          <Text style={styles.tagline}>Diversão Sem Limites!</Text> */}
         </View>
-      </LinearGradient>
+      </ImageBackground>
 
       <View style={styles.content}>
         <View style={styles.welcomeCard}>
@@ -164,8 +163,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 100,
+    paddingBottom: 70,
     paddingHorizontal: 20,
   },
   headerContent: {
@@ -194,12 +193,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,
+    marginTop: -100,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#222',
   },
   welcomeTitle: {
-    color: '#fff',
+    color: '#00ff6a',
     fontSize: 22,
     fontWeight: '700',
     marginTop: 12,
