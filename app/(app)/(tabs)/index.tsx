@@ -60,10 +60,10 @@ export default function HomeScreen() {
         source={require('@/assets/images/HappyJump35.png')}
         style={styles.headerGradient}
         resizeMode="cover">
-        <View style={styles.headerContent}>
-          {/* <Text style={styles.logo}>HAPPY JUMP</Text>
-          <Text style={styles.tagline}>Diversão Sem Limites!</Text> */}
-        </View>
+        {/* <View style={styles.headerContent}>
+          <Text style={styles.logo}>HAPPY JUMP</Text>
+          <Text style={styles.tagline}>Diversão Sem Limites!</Text>
+        </View> */}
       </ImageBackground>
 
       <View style={styles.content}>
@@ -167,24 +167,21 @@ const styles = StyleSheet.create({
     paddingBottom: 70,
     paddingHorizontal: 20,
   },
-  headerContent: {
-    alignItems: 'center',
-  },
-  logo: {
-    color: '#000',
-    fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textShadowColor: 'rgba(255, 255, 255, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  tagline: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 8,
-  },
+  // logo: {
+  //   color: '#000',
+  //   fontSize: 36,
+  //   fontFamily: 'Poppins-Black',
+  //   letterSpacing: 2,
+  //   textShadowColor: 'rgba(255, 255, 255, 0.5)',
+  //   textShadowOffset: { width: 0, height: 0 },
+  //   textShadowRadius: 10,
+  // },
+  // tagline: {
+  //   color: '#000',
+  //   fontSize: 16,
+  //   fontFamily: 'Poppins-SemiBold',
+  //   marginTop: 8,
+  // },
   content: {
     padding: 20,
   },
@@ -199,9 +196,10 @@ const styles = StyleSheet.create({
     borderColor: '#222',
   },
   welcomeTitle: {
+    textAlign: 'center',
     color: '#00ff6a',
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     marginTop: 12,
     marginBottom: 8,
   },
@@ -210,6 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    fontFamily: 'Poppins-Regular',
   },
   section: {
     marginBottom: 32,
@@ -223,7 +222,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
   },
   horizontalScroll: {
     flexGrow: 0,
@@ -246,12 +245,13 @@ const styles = StyleSheet.create({
   infoTitle: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     marginBottom: 12,
   },
   infoText: {
     color: '#aaa',
     fontSize: 14,
     marginBottom: 4,
+    fontFamily: 'Poppins-Regular',
   },
 });
