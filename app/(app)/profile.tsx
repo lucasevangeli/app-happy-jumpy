@@ -39,9 +39,13 @@ const FixedHeader = ({ title }: { title: string }) => {
   const router = useRouter();
   return (
     <View style={styles.fixedHeader}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <ChevronLeft color="#000" size={28} />
-      </TouchableOpacity>
+      {router.canGoBack() ? (
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ChevronLeft color="#000" size={28} />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 40, marginRight: 15 }} /> // Placeholder
+      )}
       <Text style={styles.headerTitle}>{title}</Text>
     </View>
   );

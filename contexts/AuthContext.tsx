@@ -58,43 +58,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) {
-        // User is signed out
+      if (currentUser) {
+        // If user exists, listen to their profile data
+        const dbRef = ref(database, 'users/' + currentUser.uid);
+        onValue(dbRef, (snapshot) => {
+          const data = snapshot.val() as UserProfile;
+          setProfile(data);
+          if (data) {
+            setIsProfileComplete(data.profileComplete === true);
+          } else {
+            setIsProfileComplete(false);
+          }
+          // Loading is false only after we get user and profile info
+          setLoading(false);
+        });
+      } else {
+        // No user, not loading
         setProfile(null);
         setIsProfileComplete(false);
         setLoading(false);
       }
     });
 
+    // Cleanup the listener on unmount
     return () => unsubscribeAuth();
   }, []);
 
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    setLoading(true);
-    const dbRef = ref(database, 'users/' + user.uid);
-
-    const unsubscribeDB = onValue(dbRef, (snapshot) => {
-      const data = snapshot.val() as UserProfile;
-      setProfile(data);
-      if (data) {
-        setIsProfileComplete(data.profileComplete === true);
-      } else {
-        // This case might happen if the DB record wasn't created
-        setIsProfileComplete(false);
-      }
-      setLoading(false);
-    });
-
-    // Cleanup function to detach the listener
-    return () => off(dbRef, 'value', unsubscribeDB);
-  }, [user]);
-
   const signIn = async (email, password) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    setLoading(true);
+    await signInWithEmailAndPassword(auth, email, password).catch((err) => {
+      // Set loading to false only on error, otherwise onAuthStateChanged will handle it
+      setLoading(false);
+      Alert.alert('Erro no Login', err.message);
+      throw err;
+    });
   };
 
   const signUp = async (email, password) => {
@@ -117,6 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Step 2: Use the custom token from your backend to sign in
+      // onAuthStateChanged will handle the rest, including setting loading to false
       if (data.token) {
         await signInWithCustomToken(auth, data.token);
       } else {
@@ -124,14 +122,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error: any) {
       Alert.alert('Erro no Cadastro', error.message);
+      setLoading(false); // Set loading to false on error
       // Re-throw to be caught by UI if needed
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const logout = async () => {
+    setLoading(true);
     await signOut(auth);
   };
 
