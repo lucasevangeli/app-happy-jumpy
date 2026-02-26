@@ -41,6 +41,13 @@ export type MenuItem = {
   created_at: string;
 };
 
+export type SelectedAddon = {
+  ingredient_id: string;
+  ingredient_name: string;
+  quantity: number;
+  price: number;
+};
+
 export type CartItem = {
   id: string;
   name: string;
@@ -48,4 +55,7 @@ export type CartItem = {
   quantity: number;
   type: 'ticket' | 'combo' | 'menu';
   image_url: string;
+  addons?: SelectedAddon[];
+  notes?: string;
 };
+

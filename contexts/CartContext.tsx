@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { CartItem } from '@/lib/supabase';
+import { CartItem, SelectedAddon } from '@/lib/supabase';
 
 type CartContextType = {
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
-  removeFromCart: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  removeFromCart: (id: string, addons?: SelectedAddon[], notes?: string) => void;
+  updateQuantity: (id: string, quantity: number, addons?: SelectedAddon[], notes?: string) => void;
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
@@ -18,10 +18,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (item: Omit<CartItem, 'quantity'>) => {
     setCart((prevCart) => {
-      const existingItem = prevCart.find((cartItem) => cartItem.id === item.id);
+      const existingItem = prevCart.find((cartItem) =>
+        cartItem.id === item.id &&
+        JSON.stringify(cartItem.addons) === JSON.stringify(item.addons) &&
+        cartItem.notes === item.notes
+      );
       if (existingItem) {
         return prevCart.map((cartItem) =>
-          cartItem.id === item.id
+          (cartItem.id === item.id &&
+            JSON.stringify(cartItem.addons) === JSON.stringify(item.addons) &&
+            cartItem.notes === item.notes)
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
@@ -30,17 +36,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeFromCart = (id: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+  const removeFromCart = (id: string, addons?: SelectedAddon[], notes?: string) => {
+    setCart((prevCart) => prevCart.filter((item) =>
+      !(item.id === id &&
+        JSON.stringify(item.addons) === JSON.stringify(addons) &&
+        item.notes === notes)
+    ));
   };
 
-  const updateQuantity = (id: string, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number, addons?: SelectedAddon[], notes?: string) => {
     if (quantity <= 0) {
-      removeFromCart(id);
+      removeFromCart(id, addons, notes);
       return;
     }
     setCart((prevCart) =>
-      prevCart.map((item) => (item.id === id ? { ...item, quantity } : item))
+      prevCart.map((item) =>
+        (item.id === id &&
+          JSON.stringify(item.addons) === JSON.stringify(addons) &&
+          item.notes === notes)
+          ? { ...item, quantity }
+          : item
+      )
     );
   };
 
@@ -49,7 +65,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const getTotal = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cart.reduce((total, item) => {
+      const addonsTotal = item.addons?.reduce((sum, addon) => sum + addon.price, 0) || 0;
+      return total + (item.price + addonsTotal) * item.quantity;
+    }, 0);
   };
 
   const getItemCount = () => {
@@ -71,6 +90,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     </CartContext.Provider>
   );
 }
+
 
 export function useCart() {
   const context = useContext(CartContext);

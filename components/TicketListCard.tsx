@@ -19,27 +19,34 @@ export function TicketListCard({
   onAddToCart,
 }: TicketListCardProps) {
   return (
-    <View style={styles.container}>
-      <Image source={{ uri: imageUrl }} style={styles.image} />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.textSection}>
-            <Text style={styles.name}>{name}</Text>
-            <View style={styles.durationBadge}>
-              <Clock size={12} color="#00ff88" strokeWidth={2.5} />
-              <Text style={styles.duration}>{duration} minutos</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.addButton} onPress={onAddToCart}>
-            <Plus size={20} color="#000" strokeWidth={3} />
-          </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={0.8}
+      onPress={onAddToCart}
+    >
+      {/* Imagem com Badge de Duração */}
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: imageUrl || 'https://via.placeholder.com/150' }}
+          style={styles.image}
+        />
+        <View style={styles.durationBadge}>
+          <Clock size={10} color="#000" strokeWidth={3} />
+          <Text style={styles.durationText}>{duration} min</Text>
         </View>
-        <Text style={styles.description} numberOfLines={2}>
-          {description}
-        </Text>
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.textSection}>
+          <Text style={styles.name} numberOfLines={2}>{name}</Text>
+          <Text style={styles.description} numberOfLines={2}>
+            {description || 'Diversão garantida!'}
+          </Text>
+        </View>
+
         <Text style={styles.price}>R$ {price.toFixed(2)}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -52,69 +59,66 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#222',
-    minHeight: 120,
+    height: 110,
+    alignItems: 'center',
+  },
+  imageContainer: {
+    width: 90,
+    height: '100%',
+    backgroundColor: '#1a1a1a',
+    position: 'relative',
   },
   image: {
-    width: 120,
-    height: 120,
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
-    backgroundColor: '#222',
+  },
+  durationBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    backgroundColor: 'rgba(0, 255, 136, 0.9)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  durationText: {
+    color: '#000',
+    fontSize: 8,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
   content: {
     flex: 1,
     padding: 12,
+    height: '100%',
     justifyContent: 'space-between',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginBottom: 4,
   },
   textSection: {
     flex: 1,
   },
   name: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginBottom: 2,
+    lineHeight: 18,
     fontFamily: 'Poppins-Bold',
-    marginBottom: 4,
-  },
-  durationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#000',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  duration: {
-    color: '#00ff88',
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
   },
   description: {
-    color: '#aaa',
-    fontSize: 13,
+    color: '#888',
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: 'Poppins-Regular',
-    marginBottom: 8,
-    lineHeight: 18,
-  },
-  addButton: {
-    backgroundColor: '#00ff88',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
   },
   price: {
     color: '#00ff88',
     fontSize: 18,
+    fontWeight: 'bold',
     fontFamily: 'Poppins-Bold',
   },
 });
+

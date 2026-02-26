@@ -242,12 +242,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
   },
   horizontalScroll: {
-    flexGrow: 0,
+    marginHorizontal: -20, // Sangria negativa para alcançar a borda
   },
   horizontalScrollContent: {
+    paddingHorizontal: 20, // Reposição do padding dentro do scroll
     gap: 12,
-    paddingRight: 20,
   },
+
   horizontalCard: {
     width: 280,
   },

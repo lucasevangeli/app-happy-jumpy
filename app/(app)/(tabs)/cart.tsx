@@ -51,13 +51,16 @@ export default function CartScreen() {
       const idToken = await user.getIdToken();
 
       // Preparamos o carrinho no formato que a API do site espera
-      const apiCart = cart.map(item => ({
+      const apiCart = cart.map((item) => ({
         id: item.id,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        type: item.type
+        type: item.type,
+        addons: item.addons,
+        notes: item.notes,
       }));
+
 
       // Validação rápida de cartão se selecionado
       if (paymentMethod === 'CREDIT_CARD') {
@@ -144,33 +147,50 @@ export default function CartScreen() {
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.itemsList}>
               {cart.map((item) => (
-                <View key={item.id} style={styles.cartItem}>
-                  <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+                <View
+                  key={`${item.id}-${JSON.stringify(item.addons)}-${item.notes}`}
+                  style={styles.cartItem}>
+                  <Image source={{ uri: item.image_url }} style={styles.itemImage} resizeMode="cover" />
                   <View style={styles.itemDetails}>
                     <Text style={styles.itemName}>{item.name}</Text>
                     <Text style={styles.itemPrice}>
-                      R$ {item.price.toFixed(2)} x {item.quantity}
+                      R$ {item.price.toFixed(2)}
                     </Text>
+
+                    {item.addons && item.addons.length > 0 && (
+                      <View style={styles.addonsList}>
+                        {item.addons.map((addon, idx) => (
+                          <Text key={idx} style={styles.addonText}>
+                            + {addon.ingredient_name} (R$ {addon.price.toFixed(2)})
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+
+                    {item.notes ? (
+                      <Text style={styles.notesText}>Obs: "{item.notes}"</Text>
+                    ) : null}
+
                     <View style={styles.quantityControls}>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() => updateQuantity(item.id, item.quantity - 1)}>
+                        onPress={() => updateQuantity(item.id, item.quantity - 1, item.addons, item.notes)}>
                         <Minus size={16} color="#fff" strokeWidth={3} />
                       </TouchableOpacity>
                       <Text style={styles.quantity}>{item.quantity}</Text>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() => updateQuantity(item.id, item.quantity + 1)}>
+                        onPress={() => updateQuantity(item.id, item.quantity + 1, item.addons, item.notes)}>
                         <Plus size={16} color="#fff" strokeWidth={3} />
                       </TouchableOpacity>
                     </View>
                   </View>
                   <View style={styles.itemRight}>
                     <Text style={styles.itemTotal}>
-                      R$ {(item.price * item.quantity).toFixed(2)}
+                      R$ {((item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity).toFixed(2)}
                     </Text>
                     <TouchableOpacity
-                      onPress={() => removeFromCart(item.id)}
+                      onPress={() => removeFromCart(item.id, item.addons, item.notes)}
                       style={styles.removeButton}>
                       <Trash2 size={18} color="#ff0066" strokeWidth={2.5} />
                     </TouchableOpacity>
@@ -178,6 +198,7 @@ export default function CartScreen() {
                 </View>
               ))}
             </View>
+
 
             <View style={styles.formSection}>
               <Text style={styles.formTitle}>Método de Pagamento</Text>
@@ -316,6 +337,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  addonsList: {
+    marginTop: 4,
+  },
+  addonText: {
+    color: '#00ff88',
+    fontSize: 12,
+  },
+  notesText: {
+    color: '#aaa',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+
   itemPrice: {
     color: '#aaa',
     fontSize: 13,

@@ -8,11 +8,16 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+
+
+
+
 import { useFocusEffect } from 'expo-router';
 import * as SystemUI from 'expo-system-ui';
 import { UtensilsCrossed } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
 import { MenuItemCard } from '@/components/MenuItemCard';
+import { ProductOptionsSheet } from '@/components/ProductOptionsSheet';
 import { database } from '@/lib/firebase';
 import { ref, get } from 'firebase/database';
 
@@ -22,18 +27,25 @@ type Product = {
   id: string;
   category_id: string;
   description: string;
-  name: string;
+  name?: string;
+  title?: string;
   photo_url: string;
   price: number;
-  categoryName: string; // Adicionando o nome da categoria ao produto
+  categoryName: string;
+  is_food_item: boolean; // Adicionado
+  recipe?: any; // Adicionado
 };
+
 
 export default function MenuScreen() {
   const [menuItems, setMenuItems] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>(['Todos']);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [optionsVisible, setOptionsVisible] = useState(false);
   const { addToCart, getItemCount } = useCart();
+
 
   useEffect(() => {
     loadFirebaseData();
@@ -42,54 +54,66 @@ export default function MenuScreen() {
   async function loadFirebaseData() {
     setLoading(true);
     try {
-      const categoriesRef = ref(database, 'foodCategories');
+      const foodCatsRef = ref(database, 'foodCategories');
+      const physCatsRef = ref(database, 'physicalCategories');
       const productsRef = ref(database, 'products');
 
-      const [categoriesSnapshot, productsSnapshot] = await Promise.all([
-        get(categoriesRef),
+      const [foodSnap, physSnap, productsSnap] = await Promise.all([
+        get(foodCatsRef),
+        get(physCatsRef),
         get(productsRef),
       ]);
 
-      if (categoriesSnapshot.exists() && productsSnapshot.exists()) {
-        const rawCategories: FirebaseObject<ProductCategory> =
-          categoriesSnapshot.val();
-        const rawProducts: FirebaseObject<Omit<Product, 'id' | 'categoryName'>> =
-          productsSnapshot.val();
+      const foodCats = foodSnap.exists() ? foodSnap.val() : {};
+      const physCats = physSnap.exists() ? physSnap.val() : {};
+      const rawProducts = productsSnap.exists() ? productsSnap.val() : {};
 
-        // Mapeia categorias para um objeto mais fácil de consultar: { categoryId: categoryName }
-        const categoriesMap = Object.entries(rawCategories).reduce(
-          (acc, [id, data]) => {
-            acc[id] = data.name;
-            return acc;
-          },
-          {} as { [key: string]: string }
-        );
+      // Mapeia todas as categorias: { categoryId: { name, isFood } }
+      const categoriesInfo: { [key: string]: { name: string; isFood: boolean } } = {};
 
-        // Cria a lista de nomes de categorias para os botões de filtro
-        const categoryNames = ['Todos', ...Object.values(categoriesMap)];
-        setCategories(categoryNames);
+      Object.entries(foodCats).forEach(([id, data]: [string, any]) => {
+        categoriesInfo[id] = { name: data.name, isFood: true };
+      });
+      Object.entries(physCats).forEach(([id, data]: [string, any]) => {
+        categoriesInfo[id] = { name: data.name, isFood: false };
+      });
 
-        // Cria a lista completa de produtos, adicionando o nome da categoria em cada um
-        const allProducts: Product[] = Object.entries(rawProducts).map(
-          ([id, data]) => ({
+      // Lista de nomes para o filtro (todas as categorias que têm nome)
+      const categoryNames = ['Todos', ...Object.values(categoriesInfo).map((c: any) => c.name)];
+      setCategories(Array.from(new Set(categoryNames))); // Remover duplicatas se houver
+
+
+      // Mapeia produtos
+      const allProducts: Product[] = Object.entries(rawProducts || {}).map(
+        ([id, data]: [string, any]) => {
+          const catInfo = categoriesInfo[data.category_id];
+          return {
             ...data,
             id,
-            categoryName: categoriesMap[data.category_id] || 'Outros',
-          })
-        );
-        setMenuItems(allProducts);
-      }
+            categoryName: catInfo?.name || 'Outros',
+            // Forçamos is_food_item baseado na categoria se o campo estiver ausente
+            is_food_item: data.is_food_item ?? catInfo?.isFood ?? false,
+          };
+        }
+      );
+
+
+      setMenuItems(allProducts);
     } catch (error) {
+
+
       console.error('Error loading Firebase data:', error);
     } finally {
       setLoading(false);
     }
   }
 
+
   const filteredItems =
     selectedCategory === 'Todos'
       ? menuItems
       : menuItems.filter((item) => item.categoryName === selectedCategory);
+
 
   if (loading) {
     return (
@@ -107,6 +131,7 @@ export default function MenuScreen() {
             <Text style={styles.headerTitle}>Cardápio</Text>
             <Text style={styles.headerSubtitle}>Delícias para sua diversão</Text>
           </View>
+
           {getItemCount() > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{getItemCount()}</Text>
@@ -152,21 +177,35 @@ export default function MenuScreen() {
           filteredItems.map((item) => (
             <MenuItemCard
               key={item.id}
-              name={item.name}
+              name={item.title || item.name || ''}
               description={item.description}
               price={item.price}
               imageUrl={item.photo_url}
               category={item.categoryName}
-              onAddToCart={() =>
-                addToCart({
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  type: 'menu',
-                  image_url: item.photo_url,
-                })
-              }
+              onAddToCart={() => {
+                const isFood = item.is_food_item || !!item.recipe || item.categoryName !== 'Outros';
+
+                if (isFood) {
+                  setSelectedProduct(item);
+                  setOptionsVisible(true);
+                } else {
+
+                  addToCart({
+                    id: item.id,
+                    name: item.title || item.name || '',
+                    price: item.price,
+                    type: 'menu',
+                    image_url: item.photo_url,
+                  });
+                }
+              }}
+
+
+
+
+
             />
+
           ))
         )}
 
@@ -178,7 +217,30 @@ export default function MenuScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <ProductOptionsSheet
+        visible={optionsVisible}
+        product={selectedProduct}
+        onClose={() => {
+          setOptionsVisible(false);
+          setSelectedProduct(null);
+        }}
+        onConfirm={(addons, notes) => {
+          if (selectedProduct) {
+            addToCart({
+              id: selectedProduct.id,
+              name: selectedProduct.title || selectedProduct.name || '',
+              price: selectedProduct.price,
+              type: 'menu',
+              image_url: selectedProduct.photo_url,
+              addons,
+              notes,
+            });
+          }
+        }}
+      />
     </View>
+
   );
 }
 
