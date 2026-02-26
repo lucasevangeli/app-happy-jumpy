@@ -11,7 +11,9 @@ import {
 } from '@expo-google-fonts/poppins';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { CartProvider } from '@/contexts/CartContext';
-import { TouchableOpacity, View } from 'react-native';
+import { TicketsProvider } from '@/contexts/TicketsContext';
+import { TouchableOpacity, View, Platform } from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
 import { User, ChevronLeft } from 'lucide-react-native';
 
 const NEON_GREEN = '#00ff6a';
@@ -58,6 +60,11 @@ export default function AppLayout() {
   });
 
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#000000');
+      NavigationBar.setButtonStyleAsync('light');
+    }
+
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
@@ -73,7 +80,7 @@ export default function AppLayout() {
         <Stack.Screen
           name="(tabs)"
           options={{
-            headerShown: false, 
+            headerShown: false,
           }}
         />
         <Stack.Screen

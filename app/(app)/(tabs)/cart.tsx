@@ -11,14 +11,28 @@ import {
 } from 'react-native';
 import { ShoppingCart, Trash2, Plus, Minus, Check } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { database } from '@/lib/firebase';
+import { ref, push, set } from 'firebase/database';
+import { PaymentModal } from '@/components/PaymentModal';
+import { CreditCardForm } from '@/components/CreditCardForm';
 
 export default function CartScreen() {
   const { cart, removeFromCart, updateQuantity, getTotal, clearCart } =
     useCart();
-  const [userName, setUserName] = useState('');
-  const [userPhone, setUserPhone] = useState('');
+  const { user, profile } = useAuth();
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [pixData, setPixData] = useState<any>(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [cardData, setCardData] = useState({
+    holderName: '',
+    number: '',
+    expiryMonth: '',
+    expiryYear: '',
+    ccv: '',
+  });
 
   async function handleCheckout() {
     if (cart.length === 0) {
@@ -26,192 +40,198 @@ export default function CartScreen() {
       return;
     }
 
-    if (!userName.trim() || !userPhone.trim()) {
-      Alert.alert(
-        'Dados incompletos',
-        'Por favor, preencha seu nome e telefone'
-      );
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      const orderTypes = [...new Set(cart.map((item) => item.type))];
-      const orderType =
-        orderTypes.length > 1 ? 'mixed' : orderTypes[0] || 'ticket';
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_name: userName,
-          user_phone: userPhone,
-          total_amount: getTotal(),
-          order_type: orderType,
-          status: 'pending',
-        })
-        .select()
-        .maybeSingle();
-
-      if (orderError || !order) {
-        throw new Error('Erro ao criar pedido');
+      if (!user) {
+        Alert.alert('Erro', 'Você precisa estar logado para realizar um pedido.');
+        return;
       }
 
-      const orderItems = cart.map((item) => ({
-        order_id: order.id,
-        item_type: item.type,
-        item_id: item.id,
-        item_name: item.name,
+      const idToken = await user.getIdToken();
+
+      // Preparamos o carrinho no formato que a API do site espera
+      const apiCart = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
         quantity: item.quantity,
-        unit_price: item.price,
-        subtotal: item.price * item.quantity,
+        type: item.type
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) {
-        throw new Error('Erro ao salvar itens do pedido');
+      // Validação rápida de cartão se selecionado
+      if (paymentMethod === 'CREDIT_CARD') {
+        if (!cardData.number || !cardData.ccv || !cardData.holderName) {
+          Alert.alert('Dados incorretos', 'Por favor, preencha todos os campos do cartão.');
+          setIsSubmitting(false);
+          return;
+        }
       }
 
-      Alert.alert(
-        'Pedido realizado!',
-        'Seu pedido foi recebido com sucesso. Aguarde a confirmação!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              clearCart();
-              setUserName('');
-              setUserPhone('');
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível realizar o pedido. Tente novamente.');
+      setLoadingPayment(true);
+      if (paymentMethod === 'PIX') {
+        setPaymentModalVisible(true);
+      }
+
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          paymentMethod: paymentMethod,
+          totalValue: getTotal(),
+          cart: apiCart,
+          creditCard: paymentMethod === 'CREDIT_CARD' ? cardData : undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao processar pagamento.');
+      }
+
+      if (paymentMethod === 'PIX') {
+        setPixData(data);
+      } else {
+        // Caso de cartão de crédito, o backend do site retorna o status da transação
+        Alert.alert('Sucesso', 'Pagamento com cartão processado com sucesso!');
+        setPaymentModalVisible(false);
+        clearCart();
+      }
+
+      clearCart();
+
+    } catch (error: any) {
+      setPaymentModalVisible(false);
+      Alert.alert('Erro no Checkout', error.message);
       console.error('Checkout error:', error);
     } finally {
       setIsSubmitting(false);
+      setLoadingPayment(false);
     }
-  }
-
-  if (cart.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Carrinho</Text>
-        </View>
-        <View style={styles.emptyContainer}>
-          <ShoppingCart size={64} color="#333" strokeWidth={2} />
-          <Text style={styles.emptyTitle}>Carrinho vazio</Text>
-          <Text style={styles.emptyText}>
-            Adicione ingressos, combos ou itens do cardápio para continuar
-          </Text>
-        </View>
-      </View>
-    );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Carrinho</Text>
-        <TouchableOpacity onPress={clearCart} style={styles.clearButton}>
-          <Trash2 size={20} color="#ff0066" strokeWidth={2.5} />
-          <Text style={styles.clearButtonText}>Limpar</Text>
-        </TouchableOpacity>
-      </View>
+      {cart.length === 0 && !paymentModalVisible ? (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Carrinho</Text>
+          </View>
+          <View style={styles.emptyContainer}>
+            <ShoppingCart size={64} color="#333" strokeWidth={2} />
+            <Text style={styles.emptyTitle}>Carrinho vazio</Text>
+            <Text style={styles.emptyText}>
+              Adicione ingressos, combos ou itens do cardápio para continuar
+            </Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Carrinho</Text>
+            {cart.length > 0 && (
+              <TouchableOpacity onPress={clearCart} style={styles.clearButton}>
+                <Trash2 size={20} color="#ff0066" strokeWidth={2.5} />
+                <Text style={styles.clearButtonText}>Limpar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.itemsList}>
-          {cart.map((item) => (
-            <View key={item.id} style={styles.cartItem}>
-              <Image source={{ uri: item.image_url }} style={styles.itemImage} />
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>
-                  R$ {item.price.toFixed(2)} x {item.quantity}
-                </Text>
-                <View style={styles.quantityControls}>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() => updateQuantity(item.id, item.quantity - 1)}>
-                    <Minus size={16} color="#fff" strokeWidth={3} />
-                  </TouchableOpacity>
-                  <Text style={styles.quantity}>{item.quantity}</Text>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() => updateQuantity(item.id, item.quantity + 1)}>
-                    <Plus size={16} color="#fff" strokeWidth={3} />
-                  </TouchableOpacity>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <View style={styles.itemsList}>
+              {cart.map((item) => (
+                <View key={item.id} style={styles.cartItem}>
+                  <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+                  <View style={styles.itemDetails}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemPrice}>
+                      R$ {item.price.toFixed(2)} x {item.quantity}
+                    </Text>
+                    <View style={styles.quantityControls}>
+                      <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={() => updateQuantity(item.id, item.quantity - 1)}>
+                        <Minus size={16} color="#fff" strokeWidth={3} />
+                      </TouchableOpacity>
+                      <Text style={styles.quantity}>{item.quantity}</Text>
+                      <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={() => updateQuantity(item.id, item.quantity + 1)}>
+                        <Plus size={16} color="#fff" strokeWidth={3} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.itemRight}>
+                    <Text style={styles.itemTotal}>
+                      R$ {(item.price * item.quantity).toFixed(2)}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => removeFromCart(item.id)}
+                      style={styles.removeButton}>
+                      <Trash2 size={18} color="#ff0066" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemTotal}>
-                  R$ {(item.price * item.quantity).toFixed(2)}
-                </Text>
+              ))}
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formTitle}>Método de Pagamento</Text>
+              <View style={styles.paymentMethods}>
                 <TouchableOpacity
-                  onPress={() => removeFromCart(item.id)}
-                  style={styles.removeButton}>
-                  <Trash2 size={18} color="#ff0066" strokeWidth={2.5} />
+                  style={[styles.methodButton, paymentMethod === 'PIX' && styles.methodButtonActive]}
+                  onPress={() => setPaymentMethod('PIX')}>
+                  <Text style={[styles.methodText, paymentMethod === 'PIX' && styles.methodTextActive]}>PIX</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.methodButton, paymentMethod === 'CREDIT_CARD' && styles.methodButtonActive]}
+                  onPress={() => setPaymentMethod('CREDIT_CARD')}>
+                  <Text style={[styles.methodText, paymentMethod === 'CREDIT_CARD' && styles.methodTextActive]}>Cartão</Text>
                 </TouchableOpacity>
               </View>
+              {paymentMethod === 'CREDIT_CARD' && (
+                <CreditCardForm cardData={cardData} setCardData={setCardData} />
+              )}
             </View>
-          ))}
-        </View>
 
-        <View style={styles.formSection}>
-          <Text style={styles.formTitle}>Informações de Contato</Text>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome completo</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Seu nome"
-              placeholderTextColor="#666"
-              value={userName}
-              onChangeText={setUserName}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Telefone</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="(00) 00000-0000"
-              placeholderTextColor="#666"
-              value={userPhone}
-              onChangeText={setUserPhone}
-              keyboardType="phone-pad"
-            />
-          </View>
-        </View>
+            <View style={styles.summarySection}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Subtotal</Text>
+                <Text style={styles.summaryValue}>R$ {getTotal().toFixed(2)}</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.summaryRow}>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalValue}>R$ {getTotal().toFixed(2)}</Text>
+              </View>
+            </View>
+          </ScrollView >
 
-        <View style={styles.summarySection}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>R$ {getTotal().toFixed(2)}</Text>
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.checkoutButton, isSubmitting && styles.checkoutButtonDisabled]}
+              onPress={handleCheckout}
+              disabled={isSubmitting}>
+              <Check size={24} color="#000" strokeWidth={3} />
+              <Text style={styles.checkoutButtonText}>
+                {isSubmitting ? 'Processando...' : 'Finalizar Pedido'}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>R$ {getTotal().toFixed(2)}</Text>
-          </View>
-        </View>
-      </ScrollView>
+        </>
+      )}
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.checkoutButton, isSubmitting && styles.checkoutButtonDisabled]}
-          onPress={handleCheckout}
-          disabled={isSubmitting}>
-          <Check size={24} color="#000" strokeWidth={3} />
-          <Text style={styles.checkoutButtonText}>
-            {isSubmitting ? 'Processando...' : 'Finalizar Pedido'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <PaymentModal
+        visible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+        pixData={pixData}
+        loading={loadingPayment}
+      />
+    </View >
   );
 }
 
@@ -425,5 +445,29 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 18,
     fontWeight: '700',
+  },
+  paymentMethods: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  methodButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  methodButtonActive: {
+    borderColor: '#00ff88',
+    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+  },
+  methodText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  methodTextActive: {
+    color: '#00ff88',
   },
 });

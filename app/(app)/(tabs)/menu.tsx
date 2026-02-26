@@ -35,14 +35,6 @@ export default function MenuScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const { addToCart, getItemCount } = useCart();
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === 'android') {
-        SystemUI.setBackgroundColorAsync('#000');
-      }
-    }, [])
-  );
-
   useEffect(() => {
     loadFirebaseData();
   }, []);
@@ -139,7 +131,7 @@ export default function MenuScreen() {
                 style={[
                   styles.categoryButtonText,
                   selectedCategory === category &&
-                    styles.categoryButtonTextActive,
+                  styles.categoryButtonTextActive,
                 ]}>
                 {category}
               </Text>

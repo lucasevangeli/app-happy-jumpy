@@ -7,15 +7,30 @@ import {
   ShoppingCart,
   LogOut,
   User,
+  ChevronLeft, // Added ChevronLeft
 } from 'lucide-react-native';
 import { TouchableOpacity, Platform, View } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../../lib/firebase';
+import { useCart } from '@/contexts/CartContext';
+import { useTickets } from '@/contexts/TicketsContext';
+import { useEffect } from 'react'; // Added useEffect
+import * as NavigationBar from 'expo-navigation-bar'; // Added NavigationBar
+import * as SystemUI from 'expo-system-ui'; // Added SystemUI
 
 const NEON_GREEN = '#00ff88';
 
 export default function TabLayout() {
   const router = useRouter();
+  const { cart } = useCart();
+  const { tickets } = useTickets();
+
+  const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // Lógica idêntica ao carrinho: calcula o total de ingressos ativos (não validados)
+  const validTicketsCount = tickets.filter(t => t.validated !== true).length;
+
+  console.log(`[TabLayout] Carrinho: ${cartItemsCount}, Ingressos: ${validTicketsCount}`);
 
   const handleLogout = async () => {
     try {
@@ -24,6 +39,15 @@ export default function TabLayout() {
       console.error('Erro ao fazer logout:', error);
     }
   };
+
+  // Added useEffect for SystemUI and NavigationBar
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      SystemUI.setBackgroundColorAsync('#000000');
+      NavigationBar.setBackgroundColorAsync('#000000');
+      NavigationBar.setButtonStyleAsync('light');
+    }
+  }, []);
 
   return (
     <Tabs
@@ -104,6 +128,13 @@ export default function TabLayout() {
         name="tickets"
         options={{
           title: 'Ingressos',
+          tabBarBadge: validTicketsCount > 0 ? validTicketsCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: NEON_GREEN,
+            color: '#000',
+            fontSize: 10,
+            fontWeight: 'bold',
+          },
           tabBarIcon: ({ size, color }) => (
             <Ticket size={size} color={color} strokeWidth={2.5} />
           ),
@@ -131,6 +162,13 @@ export default function TabLayout() {
         name="cart"
         options={{
           title: 'Carrinho',
+          tabBarBadge: cartItemsCount > 0 ? cartItemsCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: NEON_GREEN,
+            color: '#000',
+            fontSize: 10,
+            fontWeight: 'bold',
+          },
           tabBarIcon: ({ size, color }) => (
             <ShoppingCart size={size} color={color} strokeWidth={2.5} />
           ),

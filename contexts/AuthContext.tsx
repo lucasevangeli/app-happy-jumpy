@@ -22,6 +22,7 @@ interface UserProfile {
   createdAt: string;
   profileComplete: boolean;
   fullName?: string;
+  phone?: string;
   // Add other profile fields as needed
 }
 
@@ -30,8 +31,8 @@ interface AuthContextType {
   profile: UserProfile | null;
   isProfileComplete: boolean;
   loading: boolean;
-  signIn: (email, password) => Promise<void>;
-  signUp: (email, password) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -40,9 +41,9 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   isProfileComplete: false,
   loading: true,
-  signIn: async () => {},
-  signUp: async () => {},
-  logout: async () => {},
+  signIn: async () => { },
+  signUp: async () => { },
+  logout: async () => { },
 });
 
 export const useAuth = () => {
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  const signIn = async (email, password) => {
+  const signIn = async (email: string, password: string) => {
     setLoading(true);
     await signInWithEmailAndPassword(auth, email, password).catch((err) => {
       // Set loading to false only on error, otherwise onAuthStateChanged will handle it
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
-  const signUp = async (email, password) => {
+  const signUp = async (email: string, password: string) => {
     setLoading(true);
     try {
       // Step 1: Call your backend to register the user

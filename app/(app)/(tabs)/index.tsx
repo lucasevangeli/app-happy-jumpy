@@ -10,41 +10,57 @@ import {
   ImageBackground,
 } from 'react-native';
 import { Sparkles, TrendingUp, Gift, Ticket as TicketIcon } from 'lucide-react-native';
-import { supabase, Ticket, Combo } from '@/lib/supabase';
+import { database } from '@/lib/firebase';
+import { ref, onValue } from 'firebase/database';
 import { useCart } from '@/contexts/CartContext';
 import { ProductCard } from '@/components/ProductCard';
 import { TicketListCard } from '@/components/TicketListCard';
 
 export default function HomeScreen() {
-  const [featuredCombos, setFeaturedCombos] = useState<Combo[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [featuredCombos, setFeaturedCombos] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
 
   useEffect(() => {
-    loadFeaturedItems();
-  }, []);
+    setLoading(true);
 
-  async function loadFeaturedItems() {
-    try {
-      const { data: combos } = await supabase
-        .from('combos')
-        .select('*')
-        .eq('is_active', true);
+    // Listeners para Firebase
+    const combosRef = ref(database, 'combos');
+    const wristbandsRef = ref(database, 'wristbands');
 
-      const { data: ticketsData } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('is_active', true);
-
-      if (combos) setFeaturedCombos(combos);
-      if (ticketsData) setTickets(ticketsData);
-    } catch (error) {
-      console.error('Error loading featured items:', error);
-    } finally {
+    const unsubscribeCombos = onValue(combosRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const combosList = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setFeaturedCombos(combosList);
+      } else {
+        setFeaturedCombos([]);
+      }
       setLoading(false);
-    }
-  }
+    });
+
+    const unsubscribeWristbands = onValue(wristbandsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const wristbandsList = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+        setTickets(wristbandsList);
+      } else {
+        setTickets([]);
+      }
+    });
+
+    return () => {
+      unsubscribeCombos();
+      unsubscribeWristbands();
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -87,25 +103,26 @@ export default function HomeScreen() {
             style={styles.horizontalScroll}
             contentContainerStyle={styles.horizontalScrollContent}>
             {featuredCombos.map((combo) => {
-              const discount = Math.round(
+              const discount = combo.original_price && combo.price ? Math.round(
                 ((combo.original_price - combo.price) / combo.original_price) *
-                  100
-              );
+                100
+              ) : 0;
               return (
                 <View key={combo.id} style={styles.horizontalCard}>
                   <ProductCard
-                    name={combo.name}
+                    name={combo.title}
                     description={combo.description}
                     price={combo.price}
-                    imageUrl={combo.image_url}
-                    discount={discount}
+                    imageUrl={combo.photo_url || combo.image_url}
+                    badge="COMBO"
+                    discount={discount > 0 ? discount : undefined}
                     onAddToCart={() =>
                       addToCart({
                         id: combo.id,
-                        name: combo.name,
+                        name: combo.title,
                         price: combo.price,
                         type: 'combo',
-                        image_url: combo.image_url,
+                        image_url: combo.photo_url || combo.image_url,
                       })
                     }
                   />
@@ -123,18 +140,18 @@ export default function HomeScreen() {
           {tickets.map((ticket) => (
             <TicketListCard
               key={ticket.id}
-              name={ticket.name}
+              name={ticket.title}
               description={ticket.description}
               price={ticket.price}
-              imageUrl={ticket.image_url}
+              imageUrl={ticket.photo_url || ticket.image_url}
               duration={ticket.duration_minutes}
               onAddToCart={() =>
                 addToCart({
                   id: ticket.id,
-                  name: ticket.name,
+                  name: ticket.title,
                   price: ticket.price,
                   type: 'ticket',
-                  image_url: ticket.image_url,
+                  image_url: ticket.photo_url || ticket.image_url,
                 })
               }
             />

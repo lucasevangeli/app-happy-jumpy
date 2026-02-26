@@ -1,5 +1,6 @@
 import { useRouter, useSegments, SplashScreen, Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { TicketsProvider } from '../contexts/TicketsContext';
 import { useEffect } from 'react';
 
 // Impede que a splash screen se esconda automaticamente
@@ -30,7 +31,7 @@ const InitialLayout = () => {
 
     // Hide the splash screen once everything is ready
     SplashScreen.hideAsync();
-    
+
   }, [user, loading, isProfileComplete, segments, router]);
 
   // Render a basic Stack navigator
@@ -44,7 +45,9 @@ const InitialLayout = () => {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <InitialLayout />
+      <TicketsProvider>
+        <InitialLayout />
+      </TicketsProvider>
     </AuthProvider>
   );
 }
