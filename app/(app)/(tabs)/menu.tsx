@@ -19,7 +19,7 @@ import { useCart } from '@/contexts/CartContext';
 import { MenuItemCard } from '@/components/MenuItemCard';
 import { ProductOptionsSheet } from '@/components/ProductOptionsSheet';
 import { database } from '@/lib/firebase';
-import { ref, get } from 'firebase/database';
+import { collection, getDocs } from 'firebase/firestore';
 
 type FirebaseObject<T> = { [key: string]: T };
 type ProductCategory = { name: string };
@@ -54,48 +54,38 @@ export default function MenuScreen() {
   async function loadFirebaseData() {
     setLoading(true);
     try {
-      const foodCatsRef = ref(database, 'foodCategories');
-      const physCatsRef = ref(database, 'physicalCategories');
-      const productsRef = ref(database, 'products');
+      const foodCatsRef = collection(database, 'foodCategories');
+      const physCatsRef = collection(database, 'physicalCategories');
+      const productsRef = collection(database, 'products');
 
       const [foodSnap, physSnap, productsSnap] = await Promise.all([
-        get(foodCatsRef),
-        get(physCatsRef),
-        get(productsRef),
+        getDocs(foodCatsRef),
+        getDocs(physCatsRef),
+        getDocs(productsRef),
       ]);
 
-      const foodCats = foodSnap.exists() ? foodSnap.val() : {};
-      const physCats = physSnap.exists() ? physSnap.val() : {};
-      const rawProducts = productsSnap.exists() ? productsSnap.val() : {};
-
-      // Mapeia todas as categorias: { categoryId: { name, isFood } }
       const categoriesInfo: { [key: string]: { name: string; isFood: boolean } } = {};
 
-      Object.entries(foodCats).forEach(([id, data]: [string, any]) => {
-        categoriesInfo[id] = { name: data.name, isFood: true };
+      foodSnap.forEach(doc => {
+        categoriesInfo[doc.id] = { name: doc.data().name, isFood: true };
       });
-      Object.entries(physCats).forEach(([id, data]: [string, any]) => {
-        categoriesInfo[id] = { name: data.name, isFood: false };
+      physSnap.forEach(doc => {
+        categoriesInfo[doc.id] = { name: doc.data().name, isFood: false };
       });
 
-      // Lista de nomes para o filtro (todas as categorias que têm nome)
       const categoryNames = ['Todos', ...Object.values(categoriesInfo).map((c: any) => c.name)];
-      setCategories(Array.from(new Set(categoryNames))); // Remover duplicatas se houver
+      setCategories(Array.from(new Set(categoryNames)));
 
-
-      // Mapeia produtos
-      const allProducts: Product[] = Object.entries(rawProducts || {}).map(
-        ([id, data]: [string, any]) => {
-          const catInfo = categoriesInfo[data.category_id];
-          return {
-            ...data,
-            id,
-            categoryName: catInfo?.name || 'Outros',
-            // Forçamos is_food_item baseado na categoria se o campo estiver ausente
-            is_food_item: data.is_food_item ?? catInfo?.isFood ?? false,
-          };
-        }
-      );
+      const allProducts: Product[] = productsSnap.docs.map(doc => {
+        const data = doc.data();
+        const catInfo = categoriesInfo[data.category_id];
+        return {
+          ...data,
+          id: doc.id,
+          categoryName: catInfo?.name || 'Outros',
+          is_food_item: data.is_food_item ?? catInfo?.isFood ?? false,
+        } as Product;
+      });
 
 
       setMenuItems(allProducts);
@@ -138,83 +128,104 @@ export default function MenuScreen() {
             </View>
           )}
         </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesContainer}
-          contentContainerStyle={styles.categoriesContent}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryButton,
-                selectedCategory === category && styles.categoryButtonActive,
-              ]}
-              onPress={() => setSelectedCategory(category)}>
-              <Text
-                style={[
-                  styles.categoryButtonText,
-                  selectedCategory === category &&
-                  styles.categoryButtonTextActive,
-                ]}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredItems.length === 0 ? (
-          <View style={styles.emptyState}>
-            <UtensilsCrossed size={48} color="#333" strokeWidth={2} />
-            <Text style={styles.emptyStateText}>
-              Nenhum item disponível nesta categoria
+        {/* Simulação de Cards de Promoções */}
+        <View style={styles.promotionsSection}>
+          <Text style={styles.sectionTitle}>Promoções Imperdíveis</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.promotionsContent}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={styles.promotionCard}>
+                <View style={styles.promotionBadge}>
+                  <Text style={styles.promotionBadgeText}>PROMO</Text>
+                </View>
+                <View style={styles.promotionInfo}>
+                  <Text style={styles.promotionTitle}>Combo Alegria #{i}</Text>
+                  <Text style={styles.promotionDescription}>Aproveite descontos exclusivos!</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Menu de Categorias movido para fora do header */}
+        <View style={styles.categoriesWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoriesContainer}
+            contentContainerStyle={styles.categoriesContent}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === category && styles.categoryButtonActive,
+                ]}
+                onPress={() => setSelectedCategory(category)}>
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    selectedCategory === category &&
+                    styles.categoryButtonTextActive,
+                  ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.productsContainer}>
+          {filteredItems.length === 0 ? (
+            <View style={styles.emptyState}>
+              <UtensilsCrossed size={48} color="#333" strokeWidth={2} />
+              <Text style={styles.emptyStateText}>
+                Nenhum item disponível nesta categoria
+              </Text>
+            </View>
+          ) : (
+            filteredItems.map((item) => (
+              <MenuItemCard
+                key={item.id}
+                name={item.title || item.name || ''}
+                description={item.description}
+                price={item.price}
+                imageUrl={item.photo_url}
+                category={item.categoryName}
+                onAddToCart={() => {
+                  const isFood = item.is_food_item || !!item.recipe || item.categoryName !== 'Outros';
+
+                  if (isFood) {
+                    setSelectedProduct(item);
+                    setOptionsVisible(true);
+                  } else {
+
+                    addToCart({
+                      id: item.id,
+                      name: item.title || item.name || '',
+                      price: item.price,
+                      type: 'menu',
+                      image_url: item.photo_url,
+                    });
+                  }
+                }}
+              />
+
+            ))
+          )}
+
+          <View style={styles.footer}>
+            <UtensilsCrossed size={24} color="#00ffff" strokeWidth={2} />
+            <Text style={styles.footerText}>
+              Todos os itens são preparados fresquinhos para você. Faça seu pedido e
+              retire no balcão!
             </Text>
           </View>
-        ) : (
-          filteredItems.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              name={item.title || item.name || ''}
-              description={item.description}
-              price={item.price}
-              imageUrl={item.photo_url}
-              category={item.categoryName}
-              onAddToCart={() => {
-                const isFood = item.is_food_item || !!item.recipe || item.categoryName !== 'Outros';
-
-                if (isFood) {
-                  setSelectedProduct(item);
-                  setOptionsVisible(true);
-                } else {
-
-                  addToCart({
-                    id: item.id,
-                    name: item.title || item.name || '',
-                    price: item.price,
-                    type: 'menu',
-                    image_url: item.photo_url,
-                  });
-                }
-              }}
-
-
-
-
-
-            />
-
-          ))
-        )}
-
-        <View style={styles.footer}>
-          <UtensilsCrossed size={24} color="#00ffff" strokeWidth={2} />
-          <Text style={styles.footerText}>
-            Todos os itens são preparados fresquinhos para você. Faça seu pedido e
-            retire no balcão!
-          </Text>
         </View>
       </ScrollView>
 
@@ -322,7 +333,65 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 0, // Ajustado para que o ScrollView horizontal possa encostar nas bordas
+  },
+  promotionsSection: {
+    paddingVertical: 20,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  promotionsContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  promotionCard: {
+    width: 280,
+    height: 140,
+    backgroundColor: '#111',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#222',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    padding: 16,
+    position: 'relative',
+  },
+  promotionBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#00ff88',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  promotionBadgeText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  promotionInfo: {
+    gap: 4,
+  },
+  promotionTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  promotionDescription: {
+    color: '#aaa',
+    fontSize: 12,
+  },
+  categoriesWrapper: {
+    marginBottom: 20,
+  },
+  productsContainer: {
+    paddingHorizontal: 20,
   },
   emptyState: {
     alignItems: 'center',

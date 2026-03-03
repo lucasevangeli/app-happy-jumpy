@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { database } from '@/lib/firebase';
-import { ref, query, orderByChild, equalTo, onValue, off } from 'firebase/database';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 
 interface TicketData {
@@ -37,17 +37,16 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
 
         setLoading(true);
         setError(null);
-        const ticketsRef = ref(database, 'tickets');
-        const userTicketsQuery = query(ticketsRef, orderByChild('userId'), equalTo(user.uid));
+        const ticketsRef = collection(database, 'tickets');
+        const userTicketsQuery = query(ticketsRef, where('userId', '==', user.uid));
 
-        const unsubscribe = onValue(userTicketsQuery, (snapshot) => {
+        const unsubscribe = onSnapshot(userTicketsQuery, (snapshot) => {
             try {
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    const loadedTickets: TicketData[] = Object.keys(data).map((key) => ({
-                        id: key,
-                        ...data[key],
-                    }));
+                if (!snapshot.empty) {
+                    const loadedTickets: TicketData[] = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                    })) as TicketData[];
                     setTickets(loadedTickets);
                 } else {
                     setTickets([]);
@@ -65,7 +64,7 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         });
 
-        return () => off(userTicketsQuery, 'value', unsubscribe);
+        return () => unsubscribe();
     }, [user]);
 
     return (

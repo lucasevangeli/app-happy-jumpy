@@ -13,7 +13,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import { auth, database } from '../lib/firebase';
-import { ref, onValue, off } from 'firebase/database';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { Alert } from 'react-native';
 
 // Define the shape of the user profile data from Realtime Database
@@ -61,10 +61,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(currentUser);
       if (currentUser) {
         // If user exists, listen to their profile data
-        const dbRef = ref(database, 'users/' + currentUser.uid);
-        onValue(dbRef, (snapshot) => {
-          const data = snapshot.val() as UserProfile;
-          setProfile(data);
+        const dbRef = doc(database, 'users', currentUser.uid);
+        onSnapshot(dbRef, (snapshot) => {
+          const data = snapshot.data() as UserProfile | undefined;
+          setProfile(data || null);
           if (data) {
             setIsProfileComplete(data.profileComplete === true);
           } else {

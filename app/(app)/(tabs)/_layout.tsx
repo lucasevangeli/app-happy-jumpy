@@ -2,7 +2,7 @@ import { Tabs, useRouter } from 'expo-router';
 import {
   Home,
   Ticket,
-  Package,
+  CreditCard,
   UtensilsCrossed,
   ShoppingCart,
   LogOut,
@@ -141,20 +141,22 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="combos"
+        name="menu"
         options={{
-          title: 'Combos',
+          title: 'Cardápio',
+          headerShown: false,
           tabBarIcon: ({ size, color }) => (
-            <Package size={size} color={color} strokeWidth={2.5} />
+            <UtensilsCrossed size={size} color={color} strokeWidth={2.5} />
           ),
         }}
       />
       <Tabs.Screen
-        name="menu"
+        name="cards"
         options={{
-          title: 'Cardápio',
+          title: 'Cartões',
+          headerShown: false,
           tabBarIcon: ({ size, color }) => (
-            <UtensilsCrossed size={size} color={color} strokeWidth={2.5} />
+            <CreditCard size={size} color={color} strokeWidth={2.5} />
           ),
         }}
       />
@@ -162,6 +164,7 @@ export default function TabLayout() {
         name="cart"
         options={{
           title: 'Carrinho',
+          headerShown: false,
           tabBarBadge: cartItemsCount > 0 ? cartItemsCount : undefined,
           tabBarBadgeStyle: {
             backgroundColor: NEON_GREEN,

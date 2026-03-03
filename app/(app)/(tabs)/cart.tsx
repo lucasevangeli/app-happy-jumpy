@@ -13,28 +13,20 @@ import { ShoppingCart, Trash2, Plus, Minus, Check } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { database } from '@/lib/firebase';
-import { ref, push, set } from 'firebase/database';
 import { PaymentModal } from '@/components/PaymentModal';
-import { CreditCardForm } from '@/components/CreditCardForm';
+import { PaymentMethodSheet } from '@/components/PaymentMethodSheet';
 
 export default function CartScreen() {
   const { cart, removeFromCart, updateQuantity, getTotal, clearCart } =
     useCart();
   const { user, profile } = useAuth();
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [pixData, setPixData] = useState<any>(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
-  const [cardData, setCardData] = useState({
-    holderName: '',
-    number: '',
-    expiryMonth: '',
-    expiryYear: '',
-    ccv: '',
-  });
+  const [paymentSheetVisible, setPaymentSheetVisible] = useState(false);
 
-  async function handleCheckout() {
+  async function handleCheckout(method: 'PIX' | 'CREDIT_CARD', data?: any) {
     if (cart.length === 0) {
       Alert.alert('Carrinho vazio', 'Adicione itens ao carrinho primeiro');
       return;
@@ -63,16 +55,16 @@ export default function CartScreen() {
 
 
       // Validação rápida de cartão se selecionado
-      if (paymentMethod === 'CREDIT_CARD') {
-        if (!cardData.number || !cardData.ccv || !cardData.holderName) {
-          Alert.alert('Dados incorretos', 'Por favor, preencha todos os campos do cartão.');
+      if (method === 'CREDIT_CARD') {
+        if (!data?.creditCardToken && (!data?.creditCard?.number || !data?.creditCard?.ccv)) {
+          Alert.alert('Dados incompletos', 'Por favor, selecione um cartão ou preencha os dados.');
           setIsSubmitting(false);
           return;
         }
       }
 
       setLoadingPayment(true);
-      if (paymentMethod === 'PIX') {
+      if (method === 'PIX') {
         setPaymentModalVisible(true);
       }
 
@@ -83,25 +75,26 @@ export default function CartScreen() {
           'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({
-          paymentMethod: paymentMethod,
+          paymentMethod: method,
           totalValue: getTotal(),
           cart: apiCart,
-          creditCard: paymentMethod === 'CREDIT_CARD' ? cardData : undefined
+          ...(method === 'CREDIT_CARD' ? data : {})
         })
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar pagamento.');
+        throw new Error(responseData.error || 'Erro ao processar pagamento.');
       }
 
-      if (paymentMethod === 'PIX') {
-        setPixData(data);
+      if (method === 'PIX') {
+        setPixData(responseData);
       } else {
         // Caso de cartão de crédito, o backend do site retorna o status da transação
         Alert.alert('Sucesso', 'Pagamento com cartão processado com sucesso!');
         setPaymentModalVisible(false);
+        setPaymentSheetVisible(false);
         clearCart();
       }
 
@@ -200,42 +193,16 @@ export default function CartScreen() {
             </View>
 
 
-            <View style={styles.formSection}>
-              <Text style={styles.formTitle}>Método de Pagamento</Text>
-              <View style={styles.paymentMethods}>
-                <TouchableOpacity
-                  style={[styles.methodButton, paymentMethod === 'PIX' && styles.methodButtonActive]}
-                  onPress={() => setPaymentMethod('PIX')}>
-                  <Text style={[styles.methodText, paymentMethod === 'PIX' && styles.methodTextActive]}>PIX</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.methodButton, paymentMethod === 'CREDIT_CARD' && styles.methodButtonActive]}
-                  onPress={() => setPaymentMethod('CREDIT_CARD')}>
-                  <Text style={[styles.methodText, paymentMethod === 'CREDIT_CARD' && styles.methodTextActive]}>Cartão</Text>
-                </TouchableOpacity>
-              </View>
-              {paymentMethod === 'CREDIT_CARD' && (
-                <CreditCardForm cardData={cardData} setCardData={setCardData} />
-              )}
-            </View>
-
-            <View style={styles.summarySection}>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>R$ {getTotal().toFixed(2)}</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.summaryRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>R$ {getTotal().toFixed(2)}</Text>
-              </View>
-            </View>
           </ScrollView >
 
           <View style={styles.footer}>
+            <View style={styles.footerHeader}>
+              <Text style={styles.footerTotalLabel}>Total do seu pedido</Text>
+              <Text style={styles.footerTotalValue}>R$ {getTotal().toFixed(2)}</Text>
+            </View>
             <TouchableOpacity
               style={[styles.checkoutButton, isSubmitting && styles.checkoutButtonDisabled]}
-              onPress={handleCheckout}
+              onPress={() => setPaymentSheetVisible(true)}
               disabled={isSubmitting}>
               <Check size={24} color="#000" strokeWidth={3} />
               <Text style={styles.checkoutButtonText}>
@@ -248,9 +215,20 @@ export default function CartScreen() {
 
       <PaymentModal
         visible={paymentModalVisible}
-        onClose={() => setPaymentModalVisible(false)}
+        onClose={() => {
+          setPaymentModalVisible(false);
+          setPaymentSheetVisible(false);
+        }}
         pixData={pixData}
         loading={loadingPayment}
+      />
+
+      <PaymentMethodSheet
+        visible={paymentSheetVisible}
+        onClose={() => setPaymentSheetVisible(false)}
+        total={getTotal()}
+        isSubmitting={isSubmitting}
+        onConfirm={handleCheckout}
       />
     </View >
   );
@@ -420,49 +398,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  summarySection: {
-    padding: 20,
-    backgroundColor: '#111',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#222',
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    color: '#aaa',
-    fontSize: 16,
-  },
-  summaryValue: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#222',
-    marginVertical: 12,
-  },
-  totalLabel: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  totalValue: {
-    color: '#00ff88',
-    fontSize: 24,
-    fontWeight: '700',
-  },
   footer: {
     padding: 20,
     backgroundColor: '#111',
     borderTopWidth: 1,
     borderTopColor: '#222',
+  },
+  footerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  footerTotalLabel: {
+    color: '#aaa',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footerTotalValue: {
+    color: '#00ff88',
+    fontSize: 22,
+    fontWeight: '900',
   },
   checkoutButton: {
     flexDirection: 'row',

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Sparkles, TrendingUp, Gift, Ticket as TicketIcon } from 'lucide-react-native';
 import { database } from '@/lib/firebase';
-import { ref, onValue } from 'firebase/database';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { useCart } from '@/contexts/CartContext';
 import { ProductCard } from '@/components/ProductCard';
 import { TicketListCard } from '@/components/TicketListCard';
@@ -26,15 +26,14 @@ export default function HomeScreen() {
     setLoading(true);
 
     // Listeners para Firebase
-    const combosRef = ref(database, 'combos');
-    const wristbandsRef = ref(database, 'wristbands');
+    const combosRef = collection(database, 'combos');
+    const wristbandsRef = collection(database, 'wristbands');
 
-    const unsubscribeCombos = onValue(combosRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const combosList = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
+    const unsubscribeCombos = onSnapshot(combosRef, (snapshot) => {
+      if (!snapshot.empty) {
+        const combosList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
         }));
         setFeaturedCombos(combosList);
       } else {
@@ -43,12 +42,11 @@ export default function HomeScreen() {
       setLoading(false);
     });
 
-    const unsubscribeWristbands = onValue(wristbandsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const wristbandsList = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
+    const unsubscribeWristbands = onSnapshot(wristbandsRef, (snapshot) => {
+      if (!snapshot.empty) {
+        const wristbandsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
         }));
         setTickets(wristbandsList);
       } else {
